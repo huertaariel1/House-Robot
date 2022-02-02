@@ -13,23 +13,12 @@ module Environment
     placeObstacle,
     taken,
     initEnv,
-    randomNum1,
+    addCell,
   )
 where
 
 import EnvElements
-import System.IO.Unsafe
-import System.Random
-
-randomNum :: Int -> Int -> Int
-{-# NOINLINE randomNum #-}
-randomNum min max = unsafePerformIO (getStdRandom (randomR (min, max)))
-
-nextBounded :: Int -> StdGen -> (Int, StdGen)
-nextBounded bound s = (i `mod` bound, s') where (i, s') = next s
-
-randomNum1 :: Int -> Int
-randomNum1 x = fst (nextBounded x (mkStdGen x))
+import Utils
 
 initEnv :: Int -> Int -> Int -> Int -> Int -> Int -> [Elements]
 initEnv n m r c o d = env
@@ -103,17 +92,18 @@ index xs (r, c) = do
   where
     y = []
 
-removeCell :: Elements -> [Elements] -> [Elements]
-removeCell _ [] = []
-removeCell y (x : xs)
-  | x == y = removeCell y xs
-  | otherwise = x : removeCell y xs
+removeCell :: Eq a => a -> [a] -> Bool -> [a]
+removeCell _ [] _ = []
+removeCell y (x : xs) False
+  | x == y = removeCell y xs True
+  | otherwise = x : removeCell y xs False
+removeCell y (x : xs) True = x : removeCell y xs True
 
 updateCell :: [Elements] -> Elements -> Elements -> [Elements]
 updateCell env oEl nEl = do
   nEnv ++ [nEl]
   where
-    nEnv = removeCell oEl env
+    nEnv = removeCell oEl env False
 
 addCell :: [Elements] -> Elements -> [Elements]
 addCell env nEl = env ++ [nEl]
