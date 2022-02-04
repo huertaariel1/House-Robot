@@ -26,6 +26,7 @@ library:
   source-dirs: src
   dependencies:
     - random
+    - matrix
 
 executables:
   house-robot-exe:
@@ -38,6 +39,7 @@ executables:
     dependencies:
       - house-robot
       - random
+      - matrix
 
 tests:
   house-robot-test:
@@ -52,3 +54,4 @@ tests:
       - hspec
       - array
       - random
+      - matrix

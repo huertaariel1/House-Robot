@@ -3,10 +3,12 @@ module SpecHelper
     module Environment,
     module EnvElements,
     module EnvChange,
+    module Agents,
   )
 where
 
-import Data.Array
+import Agents
+import Data.Matrix
 import EnvChange
 import EnvElements
 import Environment
