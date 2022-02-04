@@ -6,4 +6,4 @@ name :: String
 name = "Ariel"
 
 main :: IO ()
-main = testReactAgent
+main = run

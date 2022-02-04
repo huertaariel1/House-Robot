@@ -1,6 +1,8 @@
 module Agents
   ( robotAction,
     robotAction1,
+    robotAction',
+    robotAction1',
     pickChild,
     dropChild,
     cleanDirt,
@@ -243,3 +245,107 @@ getDirty :: [Elements] -> [Elements] -> [Elements]
 getDirty [] cenv = cenv
 getDirty (Dirty (a, b) : env) cenv = let cenv1 = cenv ++ [Dirty (a, b)] in getDirty env cenv1
 getDirty (_ : env) cenv = getDirty env cenv
+
+-- Proactivo
+robotAction' :: Int -> Int -> [Elements] -> [Elements]
+robotAction' n m env =
+  let (Robot (a, b) c : robots) = getRobots env []
+      occupied = index env (a, b)
+      inCell = removeCell (Robot (a, b) c) occupied False
+   in robotAction1' n m env (Robot (a, b) c : robots) inCell
+
+robotAction1' :: Int -> Int -> [Elements] -> [Elements] -> [Elements] -> [Elements]
+robotAction1' _ _ env [] _ = env
+robotAction1' n m env (Robot (a, b) False : robots) [Dirty (e, f)] =
+  let pp = getPlaypen env env []
+      env1 =
+        if null pp
+          then cleanDirt env (Robot (a, b) False) (Dirty (e, f))
+          else
+            let children = getChildren env env []
+             in if null children
+                  then cleanDirt env (Robot (a, b) False) (Dirty (e, f))
+                  else
+                    let vMatrix = bfs n m env (a, b) (Robot (a, b) False)
+                        (cr, cc) = findNearestChild children vMatrix (n * m) (a, b)
+                        distChild = vMatrix ! (cr, cc)
+                        (pr, pc) = findNearestPlaypen pp vMatrix (n * m) (a, b)
+                        (nr, nc) = buildPath (cr, cc) vMatrix distChild
+                        occupied = index env (nr, nc)
+                     in if (pr, pc) /= (a, b)
+                          then case occupied of
+                            [Child (nr, nc) False] -> let env2 = updateCell env (Robot (a, b) False) (Robot (nr, nc) True) in updateCell env2 (Child (nr, nc) False) (Child (nr, nc) True)
+                            _ -> updateCell env (Robot (a, b) False) (Robot (nr, nc) False)
+                          else cleanDirt env (Robot (a, b) False) (Dirty (e, f))
+   in if null robots
+        then robotAction1' n m env1 robots []
+        else
+          let (Robot (g, h) i) = head robots
+              occupied = index env1 (g, h)
+              inCell = removeCell (Robot (g, h) i) occupied False
+           in robotAction1' n m env1 robots inCell
+robotAction1' n m env (Robot (a, b) True : robots) [Playpen (e, f), Child (g, h) True] =
+  let env1 = dropChild env (Robot (a, b) True) (Child (g, h) True)
+   in if null robots
+        then robotAction1' n m env1 robots []
+        else
+          let (Robot (i, j) k) = head robots
+              occupied = index env1 (i, j)
+              inCell = removeCell (Robot (i, j) k) occupied False
+           in robotAction1' n m env1 robots inCell
+robotAction1' n m env (Robot (a, b) True : robots) [Child (e, f) True, Playpen (g, h)] =
+  let env1 = dropChild env (Robot (a, b) True) (Child (e, f) True)
+   in if null robots
+        then robotAction1' n m env1 robots []
+        else
+          let (Robot (i, j) k) = head robots
+              occupied = index env1 (i, j)
+              inCell = removeCell (Robot (i, j) k) occupied False
+           in robotAction1' n m env1 robots inCell
+robotAction1' n m env (Robot (a, b) True : robots) _ =
+  let vMatrix = bfs n m env (a, b) (Robot (a, b) True)
+      pp = getPlaypen env env []
+      (pr, pc) = findNearestPlaypen pp vMatrix (n * m) (a, b)
+      d = vMatrix ! (pr, pc)
+      (nr, nc) = buildPath2 (pr, pc) vMatrix d
+      env1 = updateCell env (Robot (a, b) True) (Robot (nr, nc) True)
+      env2 = updateCell env1 (Child (a, b) True) (Child (nr, nc) True)
+   in if null robots
+        then robotAction1' n m env2 robots []
+        else
+          let (Robot (d, e) f) = head robots
+              occupied = index env2 (d, e)
+              inCell = removeCell (Robot (d, e) f) occupied False
+           in robotAction1' n m env2 robots inCell
+robotAction1' n m env (Robot (a, b) False : robots) _ =
+  let vMatrix = bfs n m env (a, b) (Robot (a, b) False)
+      dd = getDirty env []
+      (dr, dc) = findNearestDirty dd vMatrix (n * m) (a, b)
+      distDirty = vMatrix ! (dr, dc)
+      pp = getPlaypen env env []
+      (nr, nc) =
+        if null pp
+          then buildPath (dr, dc) vMatrix distDirty
+          else
+            let children = getChildren env env []
+             in if null children
+                  then buildPath (dr, dc) vMatrix distDirty
+                  else
+                    let (cr, cc) = findNearestChild children vMatrix (n * m) (a, b)
+                        distChild = vMatrix ! (cr, cc)
+                        (pr, pc) = findNearestPlaypen pp vMatrix (n * m) (a, b)
+                     in if (pr, pc) /= (a, b)
+                          then buildPath (cr, cc) vMatrix distChild
+                          else buildPath (dr, dc) vMatrix distDirty
+      occupied = index env (nr, nc)
+      env1 = case occupied of
+        [Child (nr, nc) False] -> let env2 = updateCell env (Robot (a, b) False) (Robot (nr, nc) True) in updateCell env2 (Child (nr, nc) False) (Child (nr, nc) True)
+        _ -> updateCell env (Robot (a, b) False) (Robot (nr, nc) False)
+   in if null robots
+        then robotAction1' n m env1 robots []
+        else
+          let (Robot (d, e) f) = head robots
+              occupied = index env1 (d, e)
+              inCell = removeCell (Robot (d, e) f) occupied False
+           in robotAction1' n m env1 robots inCell
+robotAction1' _ _ env _ _ = env
