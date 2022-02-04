@@ -71,6 +71,7 @@ robotAction1 n m env (Robot (a, b) False) _ =
         [Child (nr, nc) False] -> let env2 = updateCell env (Robot (a, b) False) (Robot (nr, nc) True) in updateCell env2 (Child (nr, nc) False) (Child (nr, nc) True)
         _ -> updateCell env (Robot (a, b) False) (Robot (nr, nc) False)
    in env1
+robotAction1 _ _ env _ _ = env
 
 pickChild :: [Elements] -> Elements -> Elements -> [Elements]
 pickChild env (Robot (a, b) False) (Child (c, d) False) =
@@ -136,6 +137,7 @@ findNearestChild (Child (a, b) False : children) vMatrix minW (r, c) =
    in if dist > 0 && dist < minW
         then findNearestChild children vMatrix dist (a, b)
         else findNearestChild children vMatrix minW (r, c)
+findNearestChild _ _ _ (r, c) = (r, c)
 
 findNearestPlaypen :: [Elements] -> Matrix Int -> Int -> (Int, Int) -> (Int, Int)
 findNearestPlaypen [] _ _ (r, c) = (r, c)
@@ -144,6 +146,7 @@ findNearestPlaypen (Playpen (a, b) : pp) vMatrix minW (r, c) =
    in if dist > 0 && dist < minW
         then findNearestPlaypen pp vMatrix dist (a, b)
         else findNearestPlaypen pp vMatrix minW (r, c)
+findNearestPlaypen _ _ _ (r, c) = (r, c)
 
 findNearestDirty :: [Elements] -> Matrix Int -> Int -> (Int, Int) -> (Int, Int)
 findNearestDirty [] _ _ (r, c) = (r, c)
@@ -152,6 +155,7 @@ findNearestDirty (Dirty (a, b) : dd) vMatrix minW (r, c) =
    in if dist > 0 && dist < minW
         then findNearestDirty dd vMatrix dist (a, b)
         else findNearestDirty dd vMatrix minW (r, c)
+findNearestDirty _ _ _ (r, c) = (r, c)
 
 minNeighbor :: [(Int, Int)] -> Matrix Int -> Int -> (Int, Int) -> (Int, Int)
 minNeighbor [] _ _ (r, c) = (r, c)

@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module Utils (randomNum) where
 
 import System.IO.Unsafe
