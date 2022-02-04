@@ -316,5 +316,16 @@ spec =
          in boardPrint [Playpen (4, 4), Playpen (4, 5), Child (4, 4) False, Child (3, 2) False, Robot (1, 2) False, Obstacle (3, 3), Obstacle (3, 4), Obstacle (3, 1), Dirty (1, 4), Dirty (3, 5), Dirty (4, 1), Obstacle (3, 5)] sMatrix
               `shouldBe` let m = fromList 4 5 ["---", "R", "---", "D", "---", "---", "---", "---", "---", "---", "O", "C", "O", "O", "DO", "D", "---", "---", "PC", "P"] in m
 
+    context "board Print" $
+      it "should be\n┌                ┐\n│  -  R  -  D  - │\n│  -  -  -  -  - │\n│  O  C  O  O DO │\n│  D  -  - PC  C │\n└                ┘" $
+        let sMatrix = matrix 4 5 $ \(i, j) -> "---"
+         in boardPrint [Playpen (4, 4), Playpen (4, 5), Child (4, 5) False, Child (3, 2) False, Robot (1, 2) False, Obstacle (3, 3), Obstacle (3, 4), Obstacle (3, 1), Dirty (1, 4), Dirty (3, 5), Dirty (4, 1)] sMatrix
+              `shouldBe` let m = fromList 4 5 ["---", "R", "---", "D", "---", "---", "---", "---", "---", "---", "O", "C", "O", "O", "DO", "D", "---", "---", "PC", "P"] in m
+
+    context "childrenAction" $
+      it "should be [Playpen (4, 4), Playpen (4, 5), Child (4, 4) False, Child (3, 2) False, Robot (1, 2) False, Obstacle (3, 4), Dirty (1, 4), Dirty (3, 5), Dirty (4, 1), Dirty (1, 1), Dirty (1, 3), Dirty (1, 5), Dirty (2, 1), Dirty (2, 3), Dirty (2, 4), Dirty (2, 5), Dirty (4, 3)]" $
+        childrenAction 4 5 [Playpen (4, 4), Playpen (4, 5), Child (4, 4) False, Child (3, 2) False, Robot (1, 2) False, Obstacle (3, 4), Dirty (1, 4), Dirty (3, 5), Dirty (4, 1), Dirty (1, 1), Dirty (1, 3), Dirty (1, 5), Dirty (2, 1), Dirty (2, 3), Dirty (2, 4), Dirty (2, 5), Dirty (4, 3)]
+          `shouldBe` [Playpen (4, 4), Playpen (4, 5), Child (4, 4) False, Child (3, 2) False, Robot (1, 2) False, Obstacle (3, 4), Dirty (1, 4), Dirty (3, 5), Dirty (4, 1), Dirty (1, 1), Dirty (1, 3), Dirty (1, 5), Dirty (2, 1), Dirty (2, 3), Dirty (2, 4), Dirty (2, 5), Dirty (4, 3)]
+
 main :: IO ()
 main = hspec spec

@@ -28,26 +28,57 @@ import Utils
 
 robotAction :: Int -> Int -> [Elements] -> [Elements]
 robotAction n m env =
-  let [Robot (a, b) c] = getRobots env []
+  let (Robot (a, b) c : robots) = getRobots env []
       occupied = index env (a, b)
       inCell = removeCell (Robot (a, b) c) occupied False
-   in robotAction1 n m env (Robot (a, b) c) inCell
+   in robotAction1 n m env (Robot (a, b) c : robots) inCell
 
-robotAction1 :: Int -> Int -> [Elements] -> Elements -> [Elements] -> [Elements]
-robotAction1 n m env (Robot (a, b) False) [Dirty (e, f)] = cleanDirt env (Robot (a, b) False) (Dirty (e, f))
-robotAction1 n m env (Robot (a, b) True) [Playpen (e, f), Child (g, h) True] = dropChild env (Robot (a, b) True) (Child (g, h) True)
-robotAction1 n m env (Robot (a, b) True) [Child (e, f) True, Playpen (g, h)] = dropChild env (Robot (a, b) True) (Child (e, f) True)
-robotAction1 n m env (Robot (a, b) True) _ =
-  let vMatrix = bfs n m env (a, b)
+robotAction1 :: Int -> Int -> [Elements] -> [Elements] -> [Elements] -> [Elements]
+robotAction1 _ _ env [] _ = env
+robotAction1 n m env (Robot (a, b) False : robots) [Dirty (e, f)] =
+  let env1 = cleanDirt env (Robot (a, b) False) (Dirty (e, f))
+   in if null robots
+        then robotAction1 n m env1 robots []
+        else
+          let (Robot (g, h) i) = head robots
+              occupied = index env1 (g, h)
+              inCell = removeCell (Robot (g, h) i) occupied False
+           in robotAction1 n m env1 robots inCell
+robotAction1 n m env (Robot (a, b) True : robots) [Playpen (e, f), Child (g, h) True] =
+  let env1 = dropChild env (Robot (a, b) True) (Child (g, h) True)
+   in if null robots
+        then robotAction1 n m env1 robots []
+        else
+          let (Robot (i, j) k) = head robots
+              occupied = index env1 (i, j)
+              inCell = removeCell (Robot (i, j) k) occupied False
+           in robotAction1 n m env1 robots inCell
+robotAction1 n m env (Robot (a, b) True : robots) [Child (e, f) True, Playpen (g, h)] =
+  let env1 = dropChild env (Robot (a, b) True) (Child (e, f) True)
+   in if null robots
+        then robotAction1 n m env1 robots []
+        else
+          let (Robot (i, j) k) = head robots
+              occupied = index env1 (i, j)
+              inCell = removeCell (Robot (i, j) k) occupied False
+           in robotAction1 n m env1 robots inCell
+robotAction1 n m env (Robot (a, b) True : robots) _ =
+  let vMatrix = bfs n m env (a, b) (Robot (a, b) True)
       pp = getPlaypen env env []
       (pr, pc) = findNearestPlaypen pp vMatrix (n * m) (a, b)
       d = vMatrix ! (pr, pc)
       (nr, nc) = buildPath2 (pr, pc) vMatrix d
       env1 = updateCell env (Robot (a, b) True) (Robot (nr, nc) True)
       env2 = updateCell env1 (Child (a, b) True) (Child (nr, nc) True)
-   in env2
-robotAction1 n m env (Robot (a, b) False) _ =
-  let vMatrix = bfs n m env (a, b)
+   in if null robots
+        then robotAction1 n m env2 robots []
+        else
+          let (Robot (d, e) f) = head robots
+              occupied = index env2 (d, e)
+              inCell = removeCell (Robot (d, e) f) occupied False
+           in robotAction1 n m env2 robots inCell
+robotAction1 n m env (Robot (a, b) False : robots) _ =
+  let vMatrix = bfs n m env (a, b) (Robot (a, b) False)
       dd = getDirty env []
       (dr, dc) = findNearestDirty dd vMatrix (n * m) (a, b)
       distDirty = vMatrix ! (dr, dc)
@@ -70,7 +101,13 @@ robotAction1 n m env (Robot (a, b) False) _ =
       env1 = case occupied of
         [Child (nr, nc) False] -> let env2 = updateCell env (Robot (a, b) False) (Robot (nr, nc) True) in updateCell env2 (Child (nr, nc) False) (Child (nr, nc) True)
         _ -> updateCell env (Robot (a, b) False) (Robot (nr, nc) False)
-   in env1
+   in if null robots
+        then robotAction1 n m env1 robots []
+        else
+          let (Robot (d, e) f) = head robots
+              occupied = index env1 (d, e)
+              inCell = removeCell (Robot (d, e) f) occupied False
+           in robotAction1 n m env1 robots inCell
 robotAction1 _ _ env _ _ = env
 
 pickChild :: [Elements] -> Elements -> Elements -> [Elements]
@@ -104,31 +141,34 @@ gimmePositions oldPos vMatrix = do
   where
     newPos = []
 
-bfs :: Int -> Int -> [Elements] -> (Int, Int) -> Matrix Int
-bfs n m env (r, c) =
+bfs :: Int -> Int -> [Elements] -> (Int, Int) -> Elements -> Matrix Int
+bfs n m env (r, c) robot =
   let iMatrix = newMatrix n m
       vMatrix = setElem 0 (r, c) iMatrix
       iPos = gimmePositions [(r, c)] vMatrix
-   in bfs1 env vMatrix iPos 1
+   in bfs1 env vMatrix iPos 1 robot
 
-bfs1 :: [Elements] -> Matrix Int -> [(Int, Int)] -> Int -> Matrix Int
-bfs1 env vMatrix [] _ = vMatrix
-bfs1 env vMatrix pos width =
-  let (vPos, nvMatrix) = bfsHelper env vMatrix pos width []
+bfs1 :: [Elements] -> Matrix Int -> [(Int, Int)] -> Int -> Elements -> Matrix Int
+bfs1 env vMatrix [] _ _ = vMatrix
+bfs1 env vMatrix pos width robot =
+  let (vPos, nvMatrix) = bfsHelper env vMatrix pos width [] robot
       nPos = gimmePositions vPos nvMatrix
-   in bfs1 env nvMatrix nPos (width + 1)
+   in bfs1 env nvMatrix nPos (width + 1) robot
 
-bfsHelper :: [Elements] -> Matrix Int -> [(Int, Int)] -> Int -> [(Int, Int)] -> ([(Int, Int)], Matrix Int)
-bfsHelper _ vMatrix [] _ vPos = (vPos, vMatrix)
-bfsHelper env vMatrix ((a, b) : pos) width vPos =
+bfsHelper :: [Elements] -> Matrix Int -> [(Int, Int)] -> Int -> [(Int, Int)] -> Elements -> ([(Int, Int)], Matrix Int)
+bfsHelper _ vMatrix [] _ vPos _ = (vPos, vMatrix)
+bfsHelper env vMatrix ((a, b) : pos) width vPos (Robot (i, j) k) =
   let cell = index env (a, b)
       (nvMatrix, boolean) = case cell of
         [] -> (setElem width (a, b) vMatrix, True)
         [Dirty (a, b)] -> (setElem width (a, b) vMatrix, True)
-        [Child (a, b) False] -> (setElem width (a, b) vMatrix, True)
+        [Child (a, b) False] -> if k then (setElem (-2) (a, b) vMatrix, False) else (setElem width (a, b) vMatrix, True)
         [Playpen (a, b)] -> (setElem width (a, b) vMatrix, True)
+        [Playpen (a, b), Child (c, d) False] -> if k then (setElem (-2) (a, b) vMatrix, False) else (setElem width (a, b) vMatrix, True)
+        [Child (a, b) False, Playpen (c, d)] -> if k then (setElem (-2) (a, b) vMatrix, False) else (setElem width (a, b) vMatrix, True)
         _ -> (setElem (-2) (a, b) vMatrix, False)
-   in if boolean then bfsHelper env nvMatrix pos width (vPos ++ [(a, b)]) else bfsHelper env nvMatrix pos width vPos
+   in if boolean then bfsHelper env nvMatrix pos width (vPos ++ [(a, b)]) (Robot (i, j) k) else bfsHelper env nvMatrix pos width vPos (Robot (i, j) k)
+bfsHelper _ vMatrix _ _ vPos _ = (vPos, vMatrix)
 
 findNearestChild :: [Elements] -> Matrix Int -> Int -> (Int, Int) -> (Int, Int)
 findNearestChild [] _ _ (r, c) = (r, c)

@@ -18,6 +18,8 @@ module Environment
 where
 
 import EnvElements
+import System.IO.Unsafe
+import System.Random (randomRIO)
 import Utils
 
 initEnv :: Int -> Int -> Int -> Int -> Int -> Int -> [Elements]
@@ -37,8 +39,9 @@ placePlaypen n m c = if boundsEnv n m rr rc then placePlaypen1 n m rr rc (c - 1)
 
 placePlaypen1 :: Int -> Int -> Int -> Int -> Int -> [Elements] -> [Elements]
 placePlaypen1 n m lr lc 0 env = env
-placePlaypen1 n m lr lc c env =
-  let r = randomNum 1 4
+placePlaypen1 n m lr lc c env = do
+  let x = randomNum2 1 4
+      r = unsafePerformIO x
    in case r of
         1 -> if boundsEnv n m (lr - 1) lc && not (taken env (lr - 1, lc)) then (let env1 = env ++ [Playpen (lr - 1, lc)] in placePlaypen1 n m (lr - 1) lc (c - 1) env1) else placePlaypen1 n m lr lc c env
         2 -> if boundsEnv n m (lr + 1) lc && not (taken env (lr + 1, lc)) then (let env2 = env ++ [Playpen (lr + 1, lc)] in placePlaypen1 n m (lr + 1) lc (c - 1) env2) else placePlaypen1 n m lr lc c env

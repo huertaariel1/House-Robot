@@ -1,6 +1,7 @@
 module Lib
   ( sayHello,
     boardPrint,
+    testReactAgent,
   )
 where
 
@@ -11,18 +12,56 @@ import EnvElements
 import Environment
 
 sayHello :: String -> IO ()
-sayHello x = let y = bfs 4 5 [Playpen (4, 4), Playpen (4, 5), Child (4, 5) True, Child (4, 4) False, Robot (1, 2) False, Obstacle (3, 3), Obstacle (3, 4), Obstacle (3, 2), Dirty (1, 4), Dirty (3, 5), Dirty (4, 1)] (1, 2) in print y
+sayHello x = simulation 4 5 [Playpen (4, 4), Playpen (4, 5), Child (4, 4) False, Child (3, 2) False, Robot (1, 2) False, Obstacle (3, 4), Dirty (1, 4), Dirty (3, 5), Dirty (4, 1), Dirty (1, 1), Dirty (1, 3), Dirty (1, 5), Dirty (2, 1), Dirty (2, 3), Dirty (2, 4), Dirty (2, 5), Dirty (4, 3)] True False 0 1
+
+testReactAgent :: IO ()
+testReactAgent = do
+  let n = 4
+      m = 5
+      total = fromIntegral (n * m)
+      dirt = round ((50 * total) / 100)
+      obstacles = 3
+      robot = 1
+      children = 2
+      env = initEnv n m robot children obstacles dirt
+   in simulation n m env True False 0 1
+
+  let n = 9
+      m = 10
+      total = fromIntegral (n * m)
+      dirt = round ((50 * total) / 100)
+      obstacles = 7
+      robot = 2
+      children = 4
+      env = initEnv n m robot children obstacles dirt
+   in simulation n m env True False 0 1
+
+  let n = 11
+      m = 11
+      total = fromIntegral (n * m)
+      dirt = round ((50 * total) / 100)
+      obstacles = 15
+      robot = 3
+      children = 7
+      env = initEnv n m robot children obstacles dirt
+   in simulation n m env True False 0 1
 
 simulation :: Int -> Int -> [Elements] -> Bool -> Bool -> Int -> Int -> IO ()
 simulation _ _ env _ True _ _ = putStrLn "End"
-simulation n m env cBool endBool time t =
+simulation n m env cBool endBool time t = do
+  let iMatrix = matrix n m $ \(i, j) -> "---"
+      vMatrix = boardPrint env iMatrix
+      countDirt = getDirty env []
+      total = fromIntegral (n * m)
+      part = fromIntegral (length countDirt)
+      dirtPercentage = round ((part / total) * 100)
+      cleanPercentage = 100 - dirtPercentage
+   in printState n m env cBool time vMatrix (show cleanPercentage)
+
   let countDirt = getDirty env []
       total = fromIntegral (n * m)
       part = fromIntegral (length countDirt)
       dirtPercentage = round ((part / total) * 100)
-      iMatrix = matrix n m $ \(i, j) -> "---"
-      vMatrix = boardPrint env iMatrix
-      meh = printState n m env cBool time vMatrix
       nt = time + 1
       ncBool = (nt `mod` t == 0)
    in if dirtPercentage < 40
@@ -30,11 +69,11 @@ simulation n m env cBool endBool time t =
         else
           if cBool
             then
-              let env1 = childrenAction n m env
-                  env2 = robotAction n m env1
+              let env1 = robotAction n m env
+                  env2 = childrenAction n m env1
                in simulation n m env2 ncBool False nt t
             else
-              let env1 = robotAction n m env1
+              let env1 = robotAction n m env
                in simulation n m env1 ncBool False nt t
 
 boardPrint :: [Elements] -> Matrix String -> Matrix String
@@ -90,10 +129,10 @@ boardPrint (Robot (a, b) c : env) sMatrix =
           nsMatrix = setElem nelem (a, b) sMatrix
        in boardPrint env nsMatrix
 
-printState :: Int -> Int -> [Elements] -> Bool -> Int -> Matrix String -> IO ()
-printState n m env cBool time vMatrix = do
+printState :: Int -> Int -> [Elements] -> Bool -> Int -> Matrix String -> String -> IO ()
+printState n m env cBool time vMatrix clean = do
   print "---------------------- Robot de Casa ----------------------------"
-  print ("----------Agente Reactivo ------ Tiempo transcurrido :" ++ show time)
-  print ("Filas:" ++ show n ++ "Columnas: " ++ show m)
-  print ("Variación Aleatoria de Ambiente" ++ show cBool)
+  print ("----------Agente Reactivo ------ Tiempo transcurrido :" ++ show time ++ "-----Limpio : " ++ clean ++ "%")
+  print ("Filas: " ++ show n ++ " Columnas: " ++ show m)
+  print ("Variacion Aleatoria de Ambiente " ++ show cBool)
   print vMatrix

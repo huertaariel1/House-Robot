@@ -15,6 +15,7 @@ where
 
 import EnvElements
 import Environment
+import System.IO.Unsafe
 import Utils
 
 childrenAction :: Int -> Int -> [Elements] -> [Elements]
@@ -27,16 +28,21 @@ childrenAction n m env =
 childrenAction1 :: Int -> Int -> [Elements] -> [Elements] -> [Elements]
 childrenAction1 n m env [] = env
 childrenAction1 n m env (Child (a, b) c : children) =
-  let r = randomNum 0 1
-   in if r == 1
+  let x = randomNum2 0 5
+      r = unsafePerformIO x
+   in if r > 0
         then
-          let r1 = randomNum 0 3
-              child = Child (a, b) c
-           in case r1 of
-                0 -> if let occupied = index env (a -1, b) in boundsEnv n m (a -1) b && validMove n m env occupied (-1, 0) then let env1 = moveChild n m env child (a -1, b) (-1, 0) in childrenAction1 n m env1 children else childrenAction1 n m env children
-                1 -> if let occupied = index env (a + 1, b) in boundsEnv n m (a + 1) b && validMove n m env occupied (1, 0) then let env1 = moveChild n m env child (a + 1, b) (1, 0) in childrenAction1 n m env1 children else childrenAction1 n m env children
-                2 -> if let occupied = index env (a, b -1) in boundsEnv n m a (b -1) && validMove n m env occupied (0, -1) then let env1 = moveChild n m env child (a, b -1) (0, -1) in childrenAction1 n m env1 children else childrenAction1 n m env children
-                _ -> if let occupied = index env (a, b + 1) in boundsEnv n m a (b + 1) && validMove n m env occupied (0, 1) then let env1 = moveChild n m env child (a, b + 1) (0, 1) in childrenAction1 n m env1 children else childrenAction1 n m env children
+          let directions = gimmeValidDirections n m env [(a -1, b), (a + 1, b), (a, b -1), (a, b + 1)] [] (a, b)
+              l = length directions
+           in if l == 0
+                then childrenAction1 n m env children
+                else
+                  let rand = randomNum 0 (l -1)
+                      (pr, pc) = directions !! rand
+                      child = Child (a, b) c
+                      (dr, dc) = (pr - a, pc - b)
+                      env1 = moveChild n m env child (pr, pc) (dr, dc)
+                   in childrenAction1 n m env1 children
         else childrenAction1 n m env children
 childrenAction1 _ _ env _ = env
 
@@ -87,6 +93,15 @@ putDirty env d cells =
       c = snd pos
       nenv = addCell env (Dirty (r, c))
    in putDirty nenv (d -1) ncells
+
+gimmeValidDirections :: Int -> Int -> [Elements] -> [(Int, Int)] -> [(Int, Int)] -> (Int, Int) -> [(Int, Int)]
+gimmeValidDirections _ _ _ [] d _ = d
+gimmeValidDirections n m env ((a, b) : directions) d (oa, ob) =
+  if let occupied = index env (a, b)
+         (da, db) = (a - oa, b - ob)
+      in boundsEnv n m a b && validMove n m env occupied (da, db)
+    then gimmeValidDirections n m env directions (d ++ [(a, b)]) (oa, ob)
+    else gimmeValidDirections n m env directions d (oa, ob)
 
 gimmeSquare3X3C :: [Elements] -> [(Int, Int)] -> [(Int, Int)]
 gimmeSquare3X3C env xs = do
